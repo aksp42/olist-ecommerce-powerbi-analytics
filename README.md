@@ -90,6 +90,7 @@ The project was designed to answer practical business questions:
 ## 🧩 Dataset
 
 The project uses the **Olist Brazilian E-Commerce Public Dataset**.
+https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 
 ### Source tables
 
