@@ -466,6 +466,7 @@ Customer lifetime value · Cohort retention analysis · RFM customer segmentatio
 ---
 
 ## 👤 Author
+**Akanksha Singh** - https://www.linkedin.com/in/akanksha-singh-4715a0351/ © 2026
 
 **Power BI / Data Analytics Portfolio Project**
 An end-to-end Olist e-commerce Business Intelligence case study focused on transforming transactional data into actionable business insights.
