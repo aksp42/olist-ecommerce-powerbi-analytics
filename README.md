@@ -171,7 +171,7 @@ Month Year = FORMAT('Calendar'[Date], "MMM YYYY")
 
 **Calculated/support tables:** Calendar · Customer Orders · Customer Type
 
-The consolidated calculation reference contains **61 documented calculation entries** covering measures, calculated columns and calculated tables — see [`Olist_All_DAX_Measures_Columns_Tables.txt`](./Documentation/Olist_All_DAX_Measures_Columns_Tables.txt).
+The consolidated calculation reference contains **61 documented calculation entries** covering measures, calculated columns and calculated tables — see [`Olist_All_DAX_Measures_Columns_Tables.txt`](./Documentation/Olist_All_DAX_Measures_Columns_Tables.docx).
 
 ---
 
