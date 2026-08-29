@@ -1,0 +1,435 @@
+OLIST POWER BI PROJECT – MASTER DAX / MODEL / CALCULATION REFERENCE
+
+PROJECT SCOPE
+
+This file is the consolidated calculation reference for the Olist Power
+BI Business Intelligence project. It is intentionally kept as ONE text
+file so the GitHub project does not become cluttered with separate
+calculation files.
+
+The project contains these dashboard areas: 1. Executive Dashboard 2.
+Customer Analytics Dashboard 3. Customer Analytics – Detailed / Overview
+page 4. Seller Performance Dashboard 5. Logistics Performance Dashboard
+6. Customer Review Dashboard
+
+IMPORTANT ACCURACY NOTE
+
+The original PBIX formula export was not provided. Therefore, formulas
+below are the reconstructed/reference implementation based on the
+supplied Power BI screenshots, the visible Power BI model screenshot,
+the visible fields, and the calculation logic documented for the
+project. Where a formula may differ from the exact PBIX implementation,
+this file preserves the intended business logic and should be treated as
+the portfolio documentation/reference library.
+
+SOURCE DATA TABLES
+
+-   olist_orders_dataset
+-   olist_order_items_dataset
+-   olist_order_payments_dataset
+-   olist_order_reviews_dataset
+-   olist_products_dataset
+-   olist_product_category_name_translation
+-   olist_customers_dataset
+-   olist_sellers_dataset
+-   olist_geolocation_dataset
+
+MODEL / SUPPORT TABLES
+
+-   Calendar
+-   Customer Orders
+-   Customer Type
+
+VISIBLE / REFERENCED MODEL LOGIC
+
+The model uses Olist order data as the operational center and connects
+customer, seller, product, payment, review, and geography information
+through their respective keys. The Calendar table is used for time-based
+slicing and trend analysis.
+
+Important relationship/key concepts visible in the model: -
+olist_orders_dataset[order_id] -> order items/payment/reviews -
+olist_orders_dataset[customer_id] ->
+olist_customers_dataset[customer_id] -
+olist_order_items_dataset[product_id] ->
+olist_products_dataset[product_id] -
+olist_order_items_dataset[seller_id] ->
+olist_sellers_dataset[seller_id] - olist_orders_dataset/order-related
+geography is analyzed with customer and seller state/city fields and the
+geolocation dataset. - Calendar[Date] is the dedicated date dimension
+for time intelligence. - Customer Orders is a customer-level summary
+used for customer frequency and retention-style calculations.
+
+NEW / CALCULATED FIELDS
+
+The project uses calculated columns for: - Order Date - Month Year -
+Delivery Days - Shipping Time - Delivery Delay Days - Delivery Bucket -
+Delivery Bucket Sort - Half Year - Half Year Sort - Review Category -
+Customer Type - Customer Pay
+
+The project uses calculated/support tables for: - Calendar - Customer
+Orders
+
+DASHBOARD KPI MAP
+
+EXECUTIVE - Total Revenue - Total Customers - Total Orders - Average
+Order Value - Revenue YoY % - Customer YoY % - Orders YoY % - Avg Order
+Value YoY %
+
+CUSTOMER ANALYTICS - Total Customers - Returning Customers - Repeat
+Purchase Rate - Average Customer Spend - Average Orders per Customer -
+Total Orders - Average Review Score - customer count by city/state -
+customer type distribution - customer spend overview
+
+SELLER PERFORMANCE - Total Sellers - Seller Revenue - Orders Fulfilled -
+Avg Revenue per Seller - Average Delivery Days - seller revenue trend -
+seller revenue by product - sellers by state - seller performance
+summary
+
+LOGISTICS - Orders Delivered / Orders Fulfilled - Average Delivery
+Days - Average Shipping Time - Average Freight Cost - Delayed Orders -
+On Time Delivery % - Delivered Orders % - Delayed Order % - delivery
+time buckets - delayed orders by state - freight cost by product/city
+
+CUSTOMER REVIEW - Average Review Score - Total Reviews - Positive
+Reviews - Negative Reviews - Neutral Reviews - Positive Review % -
+Negative Review % - review trend - sentiment distribution - rating
+distribution - average rating by state - top rated product categories
+
+FILTER / SLICER LOGIC
+
+The dashboards use: - Year: 2016 / 2017 / 2018 - Month:
+January–December - Quarter: Q1–Q4 - Half Year: H1 / H2
+
+Month and Half Year sort columns are used so labels appear in
+chronological order rather than alphabetical order.
+
+1.  [Calculated Column] Order Date Purpose: Date-only field used for the
+    Calendar relationship and time intelligence.
+    ———————————————————————- Order Date =
+    DATEVALUE(olist_orders_dataset[order_purchase_timestamp])
+
+2.  [Calculated Column] Month Year Purpose: Display label for monthly
+    trend visuals. ———————————————————————- Month Year =
+    FORMAT(olist_orders_dataset[Order Date], “MMM yyyy”)
+
+3.  [Calculated Column] Delivery Days Purpose: Actual customer delivery
+    duration in days. ———————————————————————- Delivery Days =
+    DATEDIFF(olist_orders_dataset[Order Date],
+    DATEVALUE(olist_orders_dataset[order_delivered_customer_date]), DAY)
+
+4.  [Calculated Column] Shipping Time Purpose: Time from purchase to
+    carrier hand-off. ———————————————————————- Shipping Time =
+    DATEDIFF(DATEVALUE(olist_orders_dataset[order_purchase_timestamp]),
+    DATEVALUE(olist_orders_dataset[order_delivered_carrier_date]), DAY)
+
+5.  [Calculated Column] Delivery Delay Days Purpose: Positive values
+    indicate delivery later than the estimated date.
+    ———————————————————————- Delivery Delay Days =
+    DATEDIFF(DATEVALUE(olist_orders_dataset[estimated_delivery_date]),
+    DATEVALUE(olist_orders_dataset[order_delivered_customer_date]), DAY)
+
+6.  [Calculated Column] Delivery Bucket Purpose: Groups delivery
+    duration into dashboard-friendly operational buckets.
+    ———————————————————————- Delivery Bucket = SWITCH(TRUE(),
+    olist_orders_dataset[Delivery Days] <= 5, “1-5 Days”,
+    olist_orders_dataset[Delivery Days] <= 10, “6-10 Days”,
+    olist_orders_dataset[Delivery Days] <= 15, “11-15 Days”,
+    olist_orders_dataset[Delivery Days] <= 20, “16-20 Days”, “20+ Days”)
+
+7.  [Calculated Column] Delivery Bucket Sort Purpose: Numeric sort key
+    to keep delivery buckets in business order. ———————————————————————-
+    Delivery Bucket Sort = SWITCH(olist_orders_dataset[Delivery Bucket],
+    “1-5 Days”, 1, “6-10 Days”, 2, “11-15 Days”, 3, “16-20 Days”, 4,
+    “20+ Days”, 5)
+
+8.  [Calculated Column] Half Year Purpose: Splits the year into H1 and
+    H2 for the custom half-year slicer. ———————————————————————- Half
+    Year = IF(MONTH(olist_orders_dataset[Order Date]) <= 6, “H1”, “H2”)
+
+9.  [Calculated Column] Half Year Sort Purpose: Sort key for H1/H2.
+    ———————————————————————- Half Year Sort =
+    IF(olist_orders_dataset[Half Year] = “H1”, 1, 2)
+
+10. [Calculated Column] Review Category Purpose: Converts numeric review
+    scores into Positive/Neutral/Negative sentiment categories.
+    ———————————————————————- Review Category = SWITCH(TRUE(),
+    olist_order_reviews_dataset[review_score] >= 4, “Positive”,
+    olist_order_reviews_dataset[review_score] <= 2, “Negative”,
+    “Neutral”)
+
+11. [Calculated Column] Customer Type Purpose: Classifies customers
+    based on number of distinct orders. ———————————————————————-
+    Customer Type = IF([Order Count] > 1, “Returning”, “New”)
+
+12. [Calculated Column] Customer Pay Purpose: Gross customer-paid value
+    at order-item level used for revenue/spend metrics.
+    ———————————————————————- Customer pay =
+    olist_order_items_dataset[price] +
+    olist_order_items_dataset[freight_value]
+
+13. [Calculated Table] Calendar Purpose: Dedicated date dimension for
+    Year, Month, Quarter and Half Year slicers plus time intelligence.
+    ———————————————————————- Calendar = ADDCOLUMNS( CALENDAR(
+    MIN(olist_orders_dataset[Order Date]),
+    MAX(olist_orders_dataset[Order Date]) ), “Year”, YEAR([Date]),
+    “Month”, FORMAT([Date], “MMMM”), “Month No”, MONTH([Date]), “Month
+    Year”, FORMAT([Date], “MMM yyyy”), “Half Year”, IF(MONTH([Date]) <=
+    6, “H1”, “H2”), “Half Year Sort”, IF(MONTH([Date]) <= 6, 1, 2),
+    “Quarter”, “Q” & FORMAT([Date], “Q”) )
+
+14. [Calculated Table] Customer Orders Purpose: Customer-level summary
+    table supporting customer frequency, shipping and delay analysis.
+    ———————————————————————- Customer Orders = SUMMARIZE(
+    olist_customers_dataset,
+    olist_customers_dataset[customer_unique_id], “Order Count”,
+    CALCULATE(DISTINCTCOUNT(olist_orders_dataset[order_id])), “Average
+    Freight Cost”,
+    CALCULATE(AVERAGE(olist_order_items_dataset[freight_value])),
+    “Average Shipping Time”,
+    CALCULATE(AVERAGE(olist_orders_dataset[Shipping Time])), “Delayed
+    Orders”, CALCULATE( DISTINCTCOUNT(olist_orders_dataset[order_id]),
+    olist_orders_dataset[Delivery Delay Days] > 0 ) )
+
+15. [Measure] Total Revenue Purpose: Core gross customer-paid revenue
+    KPI. ———————————————————————- Total Revenue =
+    SUM(olist_order_items_dataset[Customer pay])
+
+16. [Measure] Total Customers Purpose: Unique customer base.
+    ———————————————————————- Total Customers =
+    DISTINCTCOUNT(olist_customers_dataset[customer_unique_id])
+
+17. [Measure] Total Orders Purpose: Distinct orders placed.
+    ———————————————————————- Total Orders =
+    DISTINCTCOUNT(olist_orders_dataset[order_id])
+
+18. [Measure] Average Order Value Purpose: Revenue per order.
+    ———————————————————————- Average Order Value = DIVIDE([Total
+    Revenue], [Total Orders])
+
+19. [Measure] Revenue YoY % Purpose: Year-over-year revenue growth.
+    ———————————————————————- Revenue YoY % = VAR CurrentRevenue = [Total
+    Revenue] VAR PriorRevenue = CALCULATE([Total Revenue],
+    SAMEPERIODLASTYEAR(‘Calendar’[Date])) RETURN DIVIDE(CurrentRevenue -
+    PriorRevenue, PriorRevenue)
+
+20. [Measure] Customer YoY % Purpose: Year-over-year customer growth.
+    ———————————————————————- Customer YoY % = VAR CurrentCustomers =
+    [Total Customers] VAR PriorCustomers = CALCULATE([Total Customers],
+    SAMEPERIODLASTYEAR(‘Calendar’[Date])) RETURN
+    DIVIDE(CurrentCustomers - PriorCustomers, PriorCustomers)
+
+21. [Measure] Orders YoY % Purpose: Year-over-year order growth.
+    ———————————————————————- Orders YoY % = VAR CurrentOrders = [Total
+    Orders] VAR PriorOrders = CALCULATE([Total Orders],
+    SAMEPERIODLASTYEAR(‘Calendar’[Date])) RETURN DIVIDE(CurrentOrders -
+    PriorOrders, PriorOrders)
+
+22. [Measure] Avg Order Value YoY % Purpose: Year-over-year change in
+    AOV. ———————————————————————- Avg Order Value YoY % = VAR CurrentAOV
+    = [Average Order Value] VAR PriorAOV = CALCULATE([Average Order
+    Value], SAMEPERIODLASTYEAR(‘Calendar’[Date])) RETURN
+    DIVIDE(CurrentAOV - PriorAOV, PriorAOV)
+
+23. [Measure] Returning Customers Purpose: Number of customers with more
+    than one order. ———————————————————————- Returning Customers =
+    COUNTROWS( FILTER( ‘Customer Orders’, ‘Customer Orders’[Order
+    Count] > 1 ) )
+
+24. [Measure] Repeat Purchase Rate Purpose: Share of customers who
+    returned to purchase. ———————————————————————- Repeat Purchase Rate
+    = DIVIDE([Returning Customers], [Total Customers])
+
+25. [Measure] Average Orders per Customer Purpose: Order frequency per
+    customer. ———————————————————————- Average Orders per Customer =
+    DIVIDE([Total Orders], [Total Customers])
+
+26. [Measure] Average Customer Spend Purpose: Average revenue
+    contribution per customer. ———————————————————————- Average Customer
+    Spend = DIVIDE([Total Revenue], [Total Customers])
+
+27. [Measure] Average Review Score Purpose: Average customer rating.
+    ———————————————————————- Average Review Score =
+    AVERAGE(olist_order_reviews_dataset[review_score])
+
+28. [Measure] Positive Reviews Purpose: Count of positive reviews.
+    ———————————————————————- Positive Reviews =
+    CALCULATE(DISTINCTCOUNT(olist_order_reviews_dataset[review_id]),
+    olist_order_reviews_dataset[Review Category] = “Positive”)
+
+29. [Measure] Negative Reviews Purpose: Count of negative reviews.
+    ———————————————————————- Negative Reviews =
+    CALCULATE(DISTINCTCOUNT(olist_order_reviews_dataset[review_id]),
+    olist_order_reviews_dataset[Review Category] = “Negative”)
+
+30. [Measure] Neutral Reviews Purpose: Count of neutral reviews.
+    ———————————————————————- Neutral Reviews =
+    CALCULATE(DISTINCTCOUNT(olist_order_reviews_dataset[review_id]),
+    olist_order_reviews_dataset[Review Category] = “Neutral”)
+
+31. [Measure] Total Reviews Purpose: Total review records.
+    ———————————————————————- Total Reviews =
+    DISTINCTCOUNT(olist_order_reviews_dataset[review_id])
+
+32. [Measure] Positive Review % Purpose: Positive sentiment share.
+    ———————————————————————- Positive Review % = DIVIDE([Positive
+    Reviews], [Total Reviews])
+
+33. [Measure] Negative Review % Purpose: Negative sentiment share.
+    ———————————————————————- Negative Review % = DIVIDE([Negative
+    Reviews], [Total Reviews])
+
+34. [Measure] Top Product Revenue Purpose: Revenue contribution of the
+    current top product context. ———————————————————————- Top Product
+    Revenue = CALCULATE([Total Revenue], TOPN(1,
+    VALUES(olist_products_dataset[product_id]), [Total Revenue], DESC))
+
+35. [Measure] Total Sellers Purpose: Unique seller base.
+    ———————————————————————- Total Sellers =
+    DISTINCTCOUNT(olist_sellers_dataset[seller_id])
+
+36. [Measure] Seller Revenue Purpose: Revenue attributed to the seller
+    context. ———————————————————————- Seller Revenue = [Total Revenue]
+
+37. [Measure] Orders Fulfilled Purpose: Orders successfully delivered.
+    ———————————————————————- Orders Fulfilled = CALCULATE([Total
+    Orders], olist_orders_dataset[order_status] = “delivered”)
+
+38. [Measure] Avg Revenue per Seller Purpose: Average revenue per
+    seller. ———————————————————————- Avg Revenue per Seller =
+    DIVIDE([Seller Revenue], [Total Sellers])
+
+39. [Measure] Average Delivery Days Purpose: Average end-to-end customer
+    delivery time. ———————————————————————- Average Delivery Days =
+    AVERAGE(olist_orders_dataset[Delivery Days])
+
+40. [Measure] Average Shipping Time Purpose: Average time from purchase
+    to carrier hand-off. ———————————————————————- Average Shipping Time
+    = AVERAGE(olist_orders_dataset[Shipping Time])
+
+41. [Measure] Average Freight Cost Purpose: Average shipping/freight
+    charge per item. ———————————————————————- Average Freight Cost =
+    AVERAGE(olist_order_items_dataset[freight_value])
+
+42. [Measure] Delayed Orders Purpose: Orders delivered after the
+    estimated date. ———————————————————————- Delayed Orders =
+    CALCULATE([Total Orders], olist_orders_dataset[Delivery Delay
+    Days] > 0)
+
+43. [Measure] On Time Orders Purpose: Orders delivered on or before the
+    estimate. ———————————————————————- On Time Orders = [Total Orders] -
+    [Delayed Orders]
+
+44. [Measure] On Time Delivery % Purpose: On-time delivery rate.
+    ———————————————————————- On Time Delivery % = DIVIDE([On Time
+    Orders], [Total Orders])
+
+45. [Measure] Delayed Order % Purpose: Share of orders that were
+    delayed. ———————————————————————- Delayed Order % = DIVIDE([Delayed
+    Orders], [Total Orders])
+
+46. [Measure] Average Delivery Days – Delivered Purpose: Average
+    delivery time restricted to delivered orders.
+    ———————————————————————- Average Delivery Days – Delivered =
+    CALCULATE([Average Delivery Days],
+    olist_orders_dataset[order_status] = “delivered”)
+
+47. [Measure] Delivered Orders % Purpose: Share of all orders that
+    reached delivered status. ———————————————————————- Delivered Orders
+    % = DIVIDE([Orders Fulfilled], [Total Orders])
+
+48. [Measure] Average Review Score – Positive Purpose: Average rating
+    among positive sentiment reviews. ———————————————————————- Average
+    Review Score – Positive = CALCULATE([Average Review Score],
+    olist_order_reviews_dataset[Review Category] = “Positive”)
+
+49. [Measure] Avg Product Rating Purpose: Reusable product/category
+    rating measure. ———————————————————————- Avg Product Rating =
+    AVERAGE(olist_order_reviews_dataset[review_score])
+
+50. [Measure] New Customers Purpose: Customers with one observed order.
+    ———————————————————————- New Customers = [Total Customers] -
+    [Returning Customers]
+
+51. [Measure] New Customer % Purpose: Acquisition share of the customer
+    base. ———————————————————————- New Customer % = DIVIDE([New
+    Customers], [Total Customers])
+
+52. [Measure] Seller Fulfillment Rate Purpose: Seller/order fulfillment
+    efficiency. ———————————————————————- Seller Fulfillment Rate =
+    DIVIDE([Orders Fulfilled], [Total Orders])
+
+53. [Measure] Revenue per Delivered Order Purpose: Revenue generated per
+    successfully delivered order. ———————————————————————- Revenue per
+    Delivered Order = DIVIDE([Total Revenue], [Orders Fulfilled])
+
+54. [Measure] Freight % of Revenue Purpose: Freight burden as a
+    percentage of customer-paid revenue. ———————————————————————-
+    Freight % of Revenue =
+    DIVIDE(SUM(olist_order_items_dataset[freight_value]), [Total
+    Revenue])
+
+55. [Measure] Avg Payment Value Purpose: Average payment transaction
+    value. ———————————————————————- Avg Payment Value =
+    AVERAGE(olist_order_payments_dataset[payment_value])
+
+56. [Measure] Total Payment Value Purpose: Total recorded payment value.
+    ———————————————————————- Total Payment Value =
+    SUM(olist_order_payments_dataset[payment_value])
+
+57. [Measure] Average Installments Purpose: Average payment installment
+    count. ———————————————————————- Average Installments =
+    AVERAGE(olist_order_payments_dataset[payment_installments])
+
+58. [Measure] Top Product by Orders Purpose: Highest order count among
+    products. ———————————————————————- Top Product by Orders = MAXX(
+    TOPN( 1, SUMMARIZE( olist_order_items_dataset,
+    olist_order_items_dataset[product_id], “OrderCount”,
+    DISTINCTCOUNT(olist_order_items_dataset[order_id]) ), [OrderCount],
+    DESC ), [OrderCount] )
+
+59. [Measure] Top Seller Revenue Purpose: Revenue generated by the
+    leading seller. ———————————————————————- Top Seller Revenue = MAXX(
+    TOPN( 1, VALUES(olist_sellers_dataset[seller_id]), [Seller Revenue],
+    DESC ), [Seller Revenue] )
+
+60. [Measure] Customer Satisfaction Index Purpose: Simple weighted
+    satisfaction index used as an optional executive KPI.
+    ———————————————————————- Customer Satisfaction Index = DIVIDE(
+    [Positive Reviews] + [Neutral Reviews] * 0.5, [Total Reviews] )
+
+61. [Measure] Revenue per Customer YoY % Purpose: YoY change in average
+    customer value. ———————————————————————- Revenue per Customer YoY %
+    = VAR CurrentValue = [Average Customer Spend] VAR PriorValue =
+    CALCULATE([Average Customer Spend],
+    SAMEPERIODLASTYEAR(‘Calendar’[Date])) RETURN DIVIDE(CurrentValue -
+    PriorValue, PriorValue)
+
+CALCULATION GOVERNANCE / IMPLEMENTATION NOTES
+
+1.  Prefer measures over calculated columns when a value must respond to
+    slicers/filter context.
+2.  Use Calendar[Date] for Year/Month/Quarter/Date filtering and time
+    intelligence rather than relying directly on fact-table timestamps.
+3.  Format percentage measures as Percentage and financial measures as
+    Currency/decimal as appropriate.
+4.  Sort Month by Month No, Half Year by Half Year Sort, and Delivery
+    Bucket by Delivery Bucket Sort.
+5.  For production implementation, validate every reconstructed formula
+    against the PBIX after opening the final model.
+6.  The dashboard visuals and titles are presentation-layer decisions;
+    the measures listed here are the calculation layer.
+7.  Do not treat the generated formulas as an exported copy of the
+    original PBIX unless the original PBIX/DAX export is supplied.
+
+GITHUB USE
+
+Recommended repository placement: -
+docs/Olist_PowerBI_Master_Project_Documentation.docx -
+docs/Olist_All_DAX_Measures_Columns_Tables.txt
+
+This TXT file is intentionally the single source for
+DAX/calculated-field documentation to satisfy the minimum-file
+requirement.
+
+END OF MASTER DAX / MODEL REFERENCE
